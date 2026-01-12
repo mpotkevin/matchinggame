@@ -2,13 +2,13 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>記憶對對碰 - 腦力大挑戰</title>
     <!-- 
-    【如何操作】
-    1. 選擇難度：進階版會在每次翻牌結算後，隨機選兩張未配對的牌進行「繞軸慢速旋轉交換」。
-    2. 預覽控制：點擊「開啟預覽」看牌，再次點擊「結束預覽並開始」後計時開始。
-    3. 圖片上傳：上傳圖片後，系統會自動根據張數設定總牌數，並在下方顯示縮圖預覽。
+    【專注模式操作】
+    1. 點擊「專注全螢幕」：隱藏設定面板，將卡牌縮放至不捲動視窗的大小。
+    2. 點擊右下角「退出」：返回設定模式，可更改圖片或難度。
+    3. 進階換位：在專注模式下依然保有平滑的旋轉交換軌跡。
     -->
     <style>
         :root {
@@ -19,7 +19,6 @@
             --accent: #D4A373;         /* 暖木色點綴 */
             --matched-color: #E9EDC9;  /* 已配對背景 */
             --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-            --anim-speed: 1.2s;        /* 旋轉速度 */
         }
 
         * {
@@ -32,24 +31,38 @@
             background-color: var(--bg-color);
             color: var(--text-main);
             margin: 0;
-            padding: 20px;
+            padding: 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
+            transition: padding 0.3s ease;
+        }
+
+        /* 專注模式樣式 */
+        body.zen-mode {
+            padding: 0;
+            overflow: hidden; /* 防止捲動 */
+        }
+
+        body.zen-mode .controls, 
+        body.zen-mode header h1, 
+        body.zen-mode footer {
+            display: none !important;
         }
 
         header {
             text-align: center;
             width: 100%;
             max-width: 600px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
+            flex-shrink: 0;
         }
 
         header h1 {
             margin: 10px 0;
-            font-size: 1.8rem;
-            letter-spacing: 3px;
+            font-size: 1.5rem;
+            letter-spacing: 2px;
             font-weight: 300;
         }
 
@@ -57,70 +70,74 @@
             display: flex;
             justify-content: space-around;
             background: white;
-            padding: 15px;
+            padding: 12px;
             border-radius: 16px;
             box-shadow: var(--card-shadow);
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             font-weight: 600;
+            width: 100%;
+            max-width: 600px;
+            z-index: 10;
         }
 
+        .stat-item { text-align: center; }
         .stat-item span {
             color: #999;
             display: block;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             letter-spacing: 1px;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
 
         /* 控制面板 */
         .controls {
             background: white;
-            padding: 24px;
+            padding: 20px;
             border-radius: 20px;
             box-shadow: var(--card-shadow);
             width: 100%;
             max-width: 600px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 12px;
+            flex-shrink: 0;
         }
 
         .control-group {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
         }
 
         label {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 700;
             color: #777;
         }
 
         select, input[type="number"], button {
-            padding: 12px;
+            padding: 10px;
             border: 1px solid #EAEAEA;
             border-radius: 10px;
-            font-size: 1rem;
+            font-size: 0.9rem;
             cursor: pointer;
             background: #FFF;
             transition: all 0.2s;
         }
 
-        /* 上傳圖片預覽區域 */
         .preview-scroll {
             grid-column: 1 / -1;
             display: flex;
             gap: 8px;
             overflow-x: auto;
             padding: 5px 0;
-            min-height: 50px;
+            min-height: 40px;
         }
 
         .preview-thumb {
-            width: 45px;
-            height: 45px;
+            width: 40px;
+            height: 40px;
             border-radius: 6px;
             object-fit: cover;
             border: 1px solid #ddd;
@@ -130,13 +147,21 @@
         .button-group {
             grid-column: 1 / -1;
             display: flex;
-            gap: 12px;
-            margin-top: 10px;
+            gap: 10px;
+            margin-top: 5px;
         }
 
         button.primary-btn {
             flex: 2;
             background-color: var(--text-main);
+            color: white;
+            border: none;
+            font-weight: bold;
+        }
+
+        button.zen-btn {
+            flex: 1.5;
+            background-color: var(--accent);
             color: white;
             border: none;
             font-weight: bold;
@@ -150,30 +175,39 @@
             font-weight: 600;
         }
 
-        button.secondary-btn.active {
-            background-color: var(--accent);
-            color: white;
-        }
-
+        button.secondary-btn.active { background-color: #DDD; }
         button:disabled { opacity: 0.3; cursor: not-allowed; }
 
-        /* 遊戲區域 */
-        #game-grid {
-            display: grid;
-            gap: 15px;
+        /* 遊戲區域容器 */
+        #game-container {
             width: 100%;
-            max-width: 900px;
-            margin: 0 auto 40px auto;
-            position: relative;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            min-height: 0;
+            overflow: hidden;
         }
 
+        #game-grid {
+            display: grid;
+            gap: 12px;
+            justify-content: center;
+            align-content: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 卡牌設計 */
         .card {
             aspect-ratio: 1 / 1;
             perspective: 1000px;
             cursor: pointer;
             position: relative;
             z-index: 1;
-            width: 100%;
+            max-width: 150px;
+            max-height: 150px;
         }
 
         .card-inner {
@@ -183,17 +217,12 @@
             text-align: center;
             transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
             transform-style: preserve-3d;
-            border-radius: 20px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
-        .card.flipped .card-inner {
-            transform: rotateY(180deg);
-        }
-
-        .card.matched .card-inner {
-            box-shadow: 0 0 0 5px var(--matched-color);
-        }
+        .card.flipped .card-inner { transform: rotateY(180deg); }
+        .card.matched .card-inner { box-shadow: 0 0 0 4px var(--matched-color); }
 
         .card-face {
             position: absolute;
@@ -204,15 +233,15 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 20px;
-            font-size: clamp(2rem, 14vw, 6rem);
+            border-radius: 16px;
+            font-size: min(12vw, 4rem);
             line-height: 1;
         }
 
         .card-back {
             background-color: var(--card-back);
             background-image: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 20%, transparent 20%);
-            background-size: 20px 20px;
+            background-size: 15px 15px;
             border: 1px solid rgba(0,0,0,0.05);
         }
 
@@ -221,36 +250,44 @@
             transform: rotateY(180deg);
         }
 
-        .card-front img {
-            width: 85%;
-            height: 85%;
-            object-fit: contain;
+        .card-front img { width: 85%; height: 85%; object-fit: contain; }
+        .swapping { z-index: 100 !important; pointer-events: none; }
+
+        /* 退出按鈕 */
+        #exit-zen {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            display: none;
+            z-index: 1000;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
         }
 
-        .swapping {
-            z-index: 100 !important;
-            pointer-events: none;
-        }
+        body.zen-mode #exit-zen { display: block; }
 
         footer {
-            margin-top: auto;
-            padding: 20px;
+            margin-top: 10px;
+            padding: 15px;
             color: #888;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             text-align: center;
             width: 100%;
+            flex-shrink: 0;
         }
 
-        footer a {
-            color: var(--accent);
-            text-decoration: none;
-            font-weight: 700;
-        }
+        footer a { color: var(--accent); text-decoration: none; font-weight: 700; }
 
         #overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(250, 250, 247, 0.96);
+            background: rgba(250, 250, 247, 0.98);
             display: none;
             flex-direction: column;
             justify-content: center;
@@ -260,12 +297,10 @@
         }
 
         @media (max-width: 480px) {
-            body { padding: 15px; }
-            #game-grid { gap: 10px; }
-            .card-inner { border-radius: 15px; }
-            .card-face { border-radius: 15px; font-size: 18vw; }
-            .controls { padding: 15px; }
-            header h1 { font-size: 1.4rem; }
+            #game-grid { gap: 8px; }
+            .card-inner { border-radius: 12px; }
+            .card-face { border-radius: 12px; }
+            header h1 { font-size: 1.2rem; }
         }
     </style>
 </head>
@@ -302,33 +337,37 @@
     <div class="control-group" id="upload-ui" style="display: none;">
         <label>上傳圖片</label>
         <div style="position: relative;">
-            <button type="button" id="upload-label" style="width: 100%; font-size: 0.8rem;">選取多張圖片</button>
+            <button type="button" id="upload-label" style="width: 100%; font-size: 0.75rem; padding: 10px;">選取多個檔案</button>
             <input type="file" id="image-upload" multiple accept="image/*" style="position: absolute; opacity: 0; left: 0; top: 0; width: 100%; height: 100%; cursor: pointer;">
         </div>
     </div>
-    <!-- 縮圖顯示區域 -->
     <div id="upload-preview" class="preview-scroll" style="display: none;"></div>
     
     <div class="button-group">
         <button class="secondary-btn" id="preview-btn" onclick="togglePreview()" disabled>開啟預覽</button>
-        <button class="primary-btn" onclick="startGame()">開始新遊戲</button>
+        <button class="zen-btn" onclick="enterZenMode()">專注全螢幕</button>
+        <button class="primary-btn" onclick="startGame()">重置遊戲</button>
     </div>
 </div>
 
-<div id="game-grid"></div>
+<div id="game-container">
+    <div id="game-grid"></div>
+</div>
+
+<button id="exit-zen" onclick="exitZenMode()">退出專注模式</button>
 
 <footer>
     設計：<a href="https://www.facebook.com/kevin.pptgame" target="_blank">職能治療師 - 鄭凱文</a>
 </footer>
 
 <div id="overlay">
-    <h2 style="font-size: 2.2rem; color: var(--text-main); font-weight: 300; margin-bottom: 10px;">挑戰成功</h2>
-    <p id="win-stats" style="margin-bottom: 40px; color: #888; font-size: 1.1rem;"></p>
+    <h2 style="font-size: 2rem; color: var(--text-main); font-weight: 300;">挑戰成功</h2>
+    <p id="win-stats" style="margin-bottom: 40px; color: #888;"></p>
     <button class="primary-btn" style="padding: 15px 60px; border-radius: 50px;" onclick="closeOverlay()">再玩一局</button>
 </div>
 
 <script>
-    const EMOJIS = ['🍎', '🐶', '🦊', '🍀', '🚀', '🎸', '⚽️', '🍦', '🍕', '🌈', '💎', '🎨', '🦁', '🐼', '🦄', '🍄', '🌍', '⏰', '🎁', '💡', '🔔', '🏀', '🍉', '🚗', '🐱', '🦋', '🥨', '🧩', '🐳', '🍓', '🥑', '🍩', '🍪', '🦁'];
+    const EMOJIS = ['🍎', '🐶', '🦊', '🍀', '🚀', '🎸', '⚽️', '🍦', '🍕', '🌈', '💎', '🎨', '🦁', '🐼', '🦄', '🍄', '🌍', '⏰', '🎁', '💡', '🔔', '🏀', '🍉', '🚗', '🐱', '🦋', '🥨', '🧩', '🐳', '🍓', '🥑', '🍩', '🍪', '🦁', '🐘', '👑'];
     
     let cards = []; 
     let flippedCards = []; 
@@ -340,54 +379,94 @@
     let isProcessing = false; 
     let isGameStarted = false;
     let isPreviewing = false;
+    let isZen = false;
     let customImages = [];
 
     function toggleUploadUI() {
         const mode = document.getElementById('source-mode').value;
-        const uploadUI = document.getElementById('upload-ui');
-        const previewUI = document.getElementById('upload-preview');
-        
-        if (mode === 'upload') {
-            uploadUI.style.display = 'flex';
-            previewUI.style.display = 'flex';
-        } else {
-            uploadUI.style.display = 'none';
-            previewUI.style.display = 'none';
-        }
+        document.getElementById('upload-ui').style.display = mode === 'upload' ? 'flex' : 'none';
+        document.getElementById('upload-preview').style.display = mode === 'upload' ? 'flex' : 'none';
     }
 
     document.getElementById('image-upload').addEventListener('change', function(e) {
         const files = Array.from(e.target.files);
-        if (files.length === 0) return;
-
         customImages = [];
-        let loaded = 0;
         const previewContainer = document.getElementById('upload-preview');
-        previewContainer.innerHTML = ''; // 清空舊縮圖
-
+        previewContainer.innerHTML = ''; 
+        let loaded = 0;
         files.forEach(file => {
             const reader = new FileReader();
             reader.onload = (ev) => {
-                const base64 = ev.target.result;
-                customImages.push(base64);
-
-                // 創建縮圖預覽
+                customImages.push(ev.target.result);
                 const img = document.createElement('img');
-                img.src = base64;
+                img.src = ev.target.result;
                 img.className = 'preview-thumb';
                 previewContainer.appendChild(img);
-
                 loaded++;
                 if (loaded === files.length) {
-                    document.getElementById('upload-label').textContent = `已載入 ${loaded} 張`;
-                    // 自動設定總牌數
-                    const cardCountInput = document.getElementById('card-count');
-                    cardCountInput.value = loaded * 2;
+                    document.getElementById('upload-label').textContent = `載入 ${loaded} 張`;
+                    document.getElementById('card-count').value = loaded * 2;
                 }
             };
             reader.readAsDataURL(file);
         });
     });
+
+    function enterZenMode() {
+        isZen = true;
+        document.body.classList.add('zen-mode');
+        // 如果遊戲還沒開始，先開始
+        if (!isGameStarted && !isPreviewing) startGame();
+        else fitGameGrid();
+    }
+
+    function exitZenMode() {
+        isZen = false;
+        document.body.classList.remove('zen-mode');
+        fitGameGrid();
+    }
+
+    // 動態調整 Grid，確保不捲動
+    function fitGameGrid() {
+        const grid = document.getElementById('game-grid');
+        const container = document.getElementById('game-container');
+        if (!cards.length) return;
+
+        const count = cards.length;
+        const containerW = container.clientWidth;
+        const containerH = container.clientHeight;
+
+        // 計算最佳行列數
+        let bestCols = 1;
+        let maxCardSize = 0;
+
+        for (let cols = 1; cols <= count; cols++) {
+            const rows = Math.ceil(count / cols);
+            const gapSize = 12; // CSS 內的 gap
+            const availableW = containerW - (cols - 1) * gapSize;
+            const availableH = containerH - (rows - 1) * gapSize;
+            
+            const cardW = availableW / cols;
+            const cardH = availableH / rows;
+            const currentCardSize = Math.min(cardW, cardH);
+
+            if (currentCardSize > maxCardSize) {
+                maxCardSize = currentCardSize;
+                bestCols = cols;
+            }
+        }
+
+        // 稍微調小一點點點確保邊緣不溢出
+        const finalSize = Math.floor(maxCardSize * 0.98);
+        grid.style.gridTemplateColumns = `repeat(${bestCols}, ${finalSize}px)`;
+        
+        cards.forEach(c => {
+            c.element.style.width = `${finalSize}px`;
+            c.element.style.height = `${finalSize}px`;
+            // 動態調整字體大小
+            c.element.querySelector('.card-face').style.fontSize = `${finalSize * 0.6}px`;
+        });
+    }
 
     function startGame() {
         resetGameState();
@@ -415,9 +494,6 @@
         const grid = document.getElementById('game-grid');
         grid.innerHTML = '';
         
-        const cols = Math.ceil(Math.sqrt(count));
-        grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-
         cards = gameIcons.map((icon, index) => {
             const cardEl = document.createElement('div');
             cardEl.className = 'card';
@@ -434,10 +510,10 @@
             return { icon, element: cardEl, isMatched: false, isFlipped: false };
         });
 
+        fitGameGrid();
         updateStats();
         document.getElementById('preview-btn').disabled = false;
         document.getElementById('preview-btn').textContent = "開啟預覽";
-        document.getElementById('preview-btn').classList.remove('active');
     }
 
     function resetGameState() {
@@ -475,12 +551,10 @@
 
     function handleCardClick(index) {
         if (isProcessing || isPreviewing) return;
-        
         if (!isGameStarted) {
             startTimer();
             isGameStarted = true;
             document.getElementById('preview-btn').disabled = true;
-            document.getElementById('preview-btn').textContent = "戰鬥中";
         }
 
         const card = cards[index];
@@ -502,7 +576,6 @@
         const [idx1, idx2] = flippedCards;
         const card1 = cards[idx1];
         const card2 = cards[idx2];
-
         const isMatch = card1.icon === card2.icon;
 
         setTimeout(() => {
@@ -528,60 +601,47 @@
                     swapTwoCardsWithOrbit();
                 }
             }
-        }, 1000);
+        }, 800);
     }
 
     async function swapTwoCardsWithOrbit() {
         const unmatched = cards.filter(c => !c.isMatched);
         if (unmatched.length < 2) return;
-
         isProcessing = true;
         const idxA = Math.floor(Math.random() * unmatched.length);
         let idxB = Math.floor(Math.random() * unmatched.length);
         while (idxA === idxB) idxB = Math.floor(Math.random() * unmatched.length);
-
         const cardA = unmatched[idxA];
         const cardB = unmatched[idxB];
-
         const rectA = cardA.element.getBoundingClientRect();
         const rectB = cardB.element.getBoundingClientRect();
-
         const dx = rectB.left - rectA.left;
         const dy = rectB.top - rectA.top;
-
         cardA.element.classList.add('swapping');
         cardB.element.classList.add('swapping');
-
         const duration = 1200; 
         const easing = 'cubic-bezier(0.45, 0.05, 0.55, 0.95)';
-
         const animA = cardA.element.animate([
             { transform: `translate(0, 0) rotate(0deg)` },
             { transform: `translate(${dx/2}px, ${dy/2}px) rotate(90deg) scale(1.15)`, offset: 0.5 },
             { transform: `translate(${dx}px, ${dy}px) rotate(180deg)` }
         ], { duration, easing });
-
         const animB = cardB.element.animate([
             { transform: `translate(0, 0) rotate(0deg)` },
             { transform: `translate(${-dx/2}px, ${-dy/2}px) rotate(90deg) scale(1.15)`, offset: 0.5 },
             { transform: `translate(${-dx}px, ${-dy}px) rotate(180deg)` }
         ], { duration, easing });
-
         await Promise.all([animA.finished, animB.finished]);
-
         const grid = document.getElementById('game-grid');
         const indexA = cards.indexOf(cardA);
         const indexB = cards.indexOf(cardB);
-
         [cards[indexA], cards[indexB]] = [cards[indexB], cards[indexA]];
-
         grid.innerHTML = '';
         cards.forEach((c, i) => {
             c.element.classList.remove('swapping');
             c.element.onclick = () => handleCardClick(i);
             grid.appendChild(c.element);
         });
-
         isProcessing = false;
     }
 
@@ -623,6 +683,7 @@
     }
 
     window.onload = startGame;
+    window.addEventListener('resize', fitGameGrid);
 </script>
 
 </body>

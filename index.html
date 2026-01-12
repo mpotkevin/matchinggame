@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>記憶對對碰 - 腦力大挑戰</title>
+    <!-- 
+    【如何操作】
+    1. 選擇難度：進階版會在每次翻牌結算後，隨機選兩張未配對的牌進行「繞軸慢速旋轉交換」。
+    2. 預覽控制：點擊「開啟預覽」看牌，再次點擊「結束預覽並開始」後計時開始。
+    3. 圖片上傳：上傳圖片後，系統會自動根據張數設定總牌數，並在下方顯示縮圖預覽。
+    -->
+    <style>
+        :root {
+            --bg-color: #FAFAF7;       /* 奶白背景 */
+            --card-back: #A3B18A;      /* 莫蘭迪綠卡背 */
+            --card-front: #ffffff;
+            --text-main: #4A4A48;      /* 深灰文字 */
+            --accent: #D4A373;         /* 暖木色點綴 */
+            --matched-color: #E9EDC9;  /* 已配對背景 */
+            --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            --anim-speed: 1.2s;        /* 旋轉速度 */
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 10px 0;
+            font-size: 1.8rem;
+            letter-spacing: 3px;
+            font-weight: 300;
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: space-around;
+            background: white;
+            padding: 15px;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .stat-item span {
+            color: #999;
+            display: block;
+            font-size: 0.7rem;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        /* 控制面板 */
+        .controls {
+            background: white;
+            padding: 24px;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 16px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #777;
+        }
+
+        select, input[type="number"], button {
+            padding: 12px;
+            border: 1px solid #EAEAEA;
+            border-radius: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            background: #FFF;
+            transition: all 0.2s;
+        }
+
+        /* 上傳圖片預覽區域 */
+        .preview-scroll {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 5px 0;
+            min-height: 50px;
+        }
+
+        .preview-thumb {
+            width: 45px;
+            height: 45px;
+            border-radius: 6px;
+            object-fit: cover;
+            border: 1px solid #ddd;
+            flex-shrink: 0;
+        }
+
+        .button-group {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        button.primary-btn {
+            flex: 2;
+            background-color: var(--text-main);
+            color: white;
+            border: none;
+            font-weight: bold;
+        }
+
+        button.secondary-btn {
+            flex: 1;
+            background-color: #F0F0F0;
+            color: #555;
+            border: none;
+            font-weight: 600;
+        }
+
+        button.secondary-btn.active {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* 遊戲區域 */
+        #game-grid {
+            display: grid;
+            gap: 15px;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto 40px auto;
+            position: relative;
+        }
+
+        .card {
+            aspect-ratio: 1 / 1;
+            perspective: 1000px;
+            cursor: pointer;
+            position: relative;
+            z-index: 1;
+            width: 100%;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            border-radius: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card.matched .card-inner {
+            box-shadow: 0 0 0 5px var(--matched-color);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            font-size: clamp(2rem, 14vw, 6rem);
+            line-height: 1;
+        }
+
+        .card-back {
+            background-color: var(--card-back);
+            background-image: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 20%, transparent 20%);
+            background-size: 20px 20px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .card-front {
+            background-color: var(--card-front);
+            transform: rotateY(180deg);
+        }
+
+        .card-front img {
+            width: 85%;
+            height: 85%;
+            object-fit: contain;
+        }
+
+        .swapping {
+            z-index: 100 !important;
+            pointer-events: none;
+        }
+
+        footer {
+            margin-top: auto;
+            padding: 20px;
+            color: #888;
+            font-size: 0.9rem;
+            text-align: center;
+            width: 100%;
+        }
+
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        #overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(250, 250, 247, 0.96);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            backdrop-filter: blur(15px);
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 15px; }
+            #game-grid { gap: 10px; }
+            .card-inner { border-radius: 15px; }
+            .card-face { border-radius: 15px; font-size: 18vw; }
+            .controls { padding: 15px; }
+            header h1 { font-size: 1.4rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>記憶對對碰</h1>
+    <div class="stats-bar">
+        <div class="stat-item"><span>TIMER</span><div id="timer">00:00</div></div>
+        <div class="stat-item"><span>STEPS</span><div id="steps">0</div></div>
+        <div class="stat-item"><span>PAIRS</span><div id="pairs">0 / 0</div></div>
+    </div>
+</header>
+
+<div class="controls">
+    <div class="control-group">
+        <label>遊戲難度</label>
+        <select id="difficulty">
+            <option value="basic">基礎版</option>
+            <option value="advanced" selected>進階版 (旋轉軌跡)</option>
+        </select>
+    </div>
+    <div class="control-group">
+        <label>圖片來源</label>
+        <select id="source-mode" onchange="toggleUploadUI()">
+            <option value="emoji">經典 Emoji</option>
+            <option value="upload">上傳相片</option>
+        </select>
+    </div>
+    <div class="control-group">
+        <label>總牌數</label>
+        <input type="number" id="card-count" value="12" min="4" max="64" step="2">
+    </div>
+    <div class="control-group" id="upload-ui" style="display: none;">
+        <label>上傳圖片</label>
+        <div style="position: relative;">
+            <button type="button" id="upload-label" style="width: 100%; font-size: 0.8rem;">選取多張圖片</button>
+            <input type="file" id="image-upload" multiple accept="image/*" style="position: absolute; opacity: 0; left: 0; top: 0; width: 100%; height: 100%; cursor: pointer;">
+        </div>
+    </div>
+    <!-- 縮圖顯示區域 -->
+    <div id="upload-preview" class="preview-scroll" style="display: none;"></div>
+    
+    <div class="button-group">
+        <button class="secondary-btn" id="preview-btn" onclick="togglePreview()" disabled>開啟預覽</button>
+        <button class="primary-btn" onclick="startGame()">開始新遊戲</button>
+    </div>
+</div>
+
+<div id="game-grid"></div>
+
+<footer>
+    設計：<a href="https://www.facebook.com/kevin.pptgame" target="_blank">職能治療師 - 鄭凱文</a>
+</footer>
+
+<div id="overlay">
+    <h2 style="font-size: 2.2rem; color: var(--text-main); font-weight: 300; margin-bottom: 10px;">挑戰成功</h2>
+    <p id="win-stats" style="margin-bottom: 40px; color: #888; font-size: 1.1rem;"></p>
+    <button class="primary-btn" style="padding: 15px 60px; border-radius: 50px;" onclick="closeOverlay()">再玩一局</button>
+</div>
+
+<script>
+    const EMOJIS = ['🍎', '🐶', '🦊', '🍀', '🚀', '🎸', '⚽️', '🍦', '🍕', '🌈', '💎', '🎨', '🦁', '🐼', '🦄', '🍄', '🌍', '⏰', '🎁', '💡', '🔔', '🏀', '🍉', '🚗', '🐱', '🦋', '🥨', '🧩', '🐳', '🍓', '🥑', '🍩', '🍪', '🦁'];
+    
+    let cards = []; 
+    let flippedCards = []; 
+    let matchedCount = 0;
+    let totalPairs = 0;
+    let steps = 0;
+    let timerInterval = null;
+    let secondsElapsed = 0;
+    let isProcessing = false; 
+    let isGameStarted = false;
+    let isPreviewing = false;
+    let customImages = [];
+
+    function toggleUploadUI() {
+        const mode = document.getElementById('source-mode').value;
+        const uploadUI = document.getElementById('upload-ui');
+        const previewUI = document.getElementById('upload-preview');
+        
+        if (mode === 'upload') {
+            uploadUI.style.display = 'flex';
+            previewUI.style.display = 'flex';
+        } else {
+            uploadUI.style.display = 'none';
+            previewUI.style.display = 'none';
+        }
+    }
+
+    document.getElementById('image-upload').addEventListener('change', function(e) {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        customImages = [];
+        let loaded = 0;
+        const previewContainer = document.getElementById('upload-preview');
+        previewContainer.innerHTML = ''; // 清空舊縮圖
+
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const base64 = ev.target.result;
+                customImages.push(base64);
+
+                // 創建縮圖預覽
+                const img = document.createElement('img');
+                img.src = base64;
+                img.className = 'preview-thumb';
+                previewContainer.appendChild(img);
+
+                loaded++;
+                if (loaded === files.length) {
+                    document.getElementById('upload-label').textContent = `已載入 ${loaded} 張`;
+                    // 自動設定總牌數
+                    const cardCountInput = document.getElementById('card-count');
+                    cardCountInput.value = loaded * 2;
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+    });
+
+    function startGame() {
+        resetGameState();
+        
+        const countInput = document.getElementById('card-count');
+        let count = parseInt(countInput.value);
+        if (count % 2 !== 0) count++; 
+        countInput.value = count;
+        totalPairs = count / 2;
+
+        const mode = document.getElementById('source-mode').value;
+        let pool = (mode === 'upload' && customImages.length > 0) ? customImages : EMOJIS;
+
+        const selectedIcons = [];
+        const tempPool = [...pool];
+        for (let i = 0; i < totalPairs; i++) {
+            if (tempPool.length === 0) tempPool.push(...pool);
+            const idx = Math.floor(Math.random() * tempPool.length);
+            selectedIcons.push(tempPool.splice(idx, 1)[0]);
+        }
+
+        const gameIcons = [...selectedIcons, ...selectedIcons];
+        shuffleArray(gameIcons);
+
+        const grid = document.getElementById('game-grid');
+        grid.innerHTML = '';
+        
+        const cols = Math.ceil(Math.sqrt(count));
+        grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+        cards = gameIcons.map((icon, index) => {
+            const cardEl = document.createElement('div');
+            cardEl.className = 'card';
+            cardEl.innerHTML = `
+                <div class="card-inner">
+                    <div class="card-face card-back"></div>
+                    <div class="card-face card-front">
+                        ${icon.startsWith('data:image') ? `<img src="${icon}">` : icon}
+                    </div>
+                </div>
+            `;
+            cardEl.onclick = () => handleCardClick(index);
+            grid.appendChild(cardEl);
+            return { icon, element: cardEl, isMatched: false, isFlipped: false };
+        });
+
+        updateStats();
+        document.getElementById('preview-btn').disabled = false;
+        document.getElementById('preview-btn').textContent = "開啟預覽";
+        document.getElementById('preview-btn').classList.remove('active');
+    }
+
+    function resetGameState() {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        secondsElapsed = 0;
+        steps = 0;
+        matchedCount = 0;
+        flippedCards = [];
+        isProcessing = false;
+        isGameStarted = false;
+        isPreviewing = false;
+        document.getElementById('timer').textContent = "00:00";
+        document.getElementById('preview-btn').disabled = true;
+    }
+
+    function togglePreview() {
+        if (isProcessing || isGameStarted) return;
+        const btn = document.getElementById('preview-btn');
+        if (!isPreviewing) {
+            isPreviewing = true;
+            cards.forEach(card => card.element.classList.add('flipped'));
+            btn.textContent = "結束預覽並開始";
+            btn.classList.add('active');
+        } else {
+            isPreviewing = false;
+            cards.forEach(card => card.element.classList.remove('flipped'));
+            btn.textContent = "戰鬥中";
+            btn.classList.remove('active');
+            btn.disabled = true;
+            isGameStarted = true;
+            startTimer();
+        }
+    }
+
+    function handleCardClick(index) {
+        if (isProcessing || isPreviewing) return;
+        
+        if (!isGameStarted) {
+            startTimer();
+            isGameStarted = true;
+            document.getElementById('preview-btn').disabled = true;
+            document.getElementById('preview-btn').textContent = "戰鬥中";
+        }
+
+        const card = cards[index];
+        if (card.isFlipped || card.isMatched || flippedCards.length >= 2) return;
+
+        card.isFlipped = true;
+        card.element.classList.add('flipped');
+        flippedCards.push(index);
+
+        if (flippedCards.length === 2) {
+            steps++;
+            updateStats();
+            checkMatch();
+        }
+    }
+
+    function checkMatch() {
+        isProcessing = true;
+        const [idx1, idx2] = flippedCards;
+        const card1 = cards[idx1];
+        const card2 = cards[idx2];
+
+        const isMatch = card1.icon === card2.icon;
+
+        setTimeout(() => {
+            if (isMatch) {
+                card1.isMatched = card2.isMatched = true;
+                card1.element.classList.add('matched');
+                card2.element.classList.add('matched');
+                matchedCount++;
+                updateStats();
+                flippedCards = [];
+                isProcessing = false;
+                checkWin();
+                if (document.getElementById('difficulty').value === 'advanced') {
+                    setTimeout(swapTwoCardsWithOrbit, 400);
+                }
+            } else {
+                card1.isFlipped = card2.isFlipped = false;
+                card1.element.classList.remove('flipped');
+                card2.element.classList.remove('flipped');
+                flippedCards = [];
+                isProcessing = false;
+                if (document.getElementById('difficulty').value === 'advanced') {
+                    swapTwoCardsWithOrbit();
+                }
+            }
+        }, 1000);
+    }
+
+    async function swapTwoCardsWithOrbit() {
+        const unmatched = cards.filter(c => !c.isMatched);
+        if (unmatched.length < 2) return;
+
+        isProcessing = true;
+        const idxA = Math.floor(Math.random() * unmatched.length);
+        let idxB = Math.floor(Math.random() * unmatched.length);
+        while (idxA === idxB) idxB = Math.floor(Math.random() * unmatched.length);
+
+        const cardA = unmatched[idxA];
+        const cardB = unmatched[idxB];
+
+        const rectA = cardA.element.getBoundingClientRect();
+        const rectB = cardB.element.getBoundingClientRect();
+
+        const dx = rectB.left - rectA.left;
+        const dy = rectB.top - rectA.top;
+
+        cardA.element.classList.add('swapping');
+        cardB.element.classList.add('swapping');
+
+        const duration = 1200; 
+        const easing = 'cubic-bezier(0.45, 0.05, 0.55, 0.95)';
+
+        const animA = cardA.element.animate([
+            { transform: `translate(0, 0) rotate(0deg)` },
+            { transform: `translate(${dx/2}px, ${dy/2}px) rotate(90deg) scale(1.15)`, offset: 0.5 },
+            { transform: `translate(${dx}px, ${dy}px) rotate(180deg)` }
+        ], { duration, easing });
+
+        const animB = cardB.element.animate([
+            { transform: `translate(0, 0) rotate(0deg)` },
+            { transform: `translate(${-dx/2}px, ${-dy/2}px) rotate(90deg) scale(1.15)`, offset: 0.5 },
+            { transform: `translate(${-dx}px, ${-dy}px) rotate(180deg)` }
+        ], { duration, easing });
+
+        await Promise.all([animA.finished, animB.finished]);
+
+        const grid = document.getElementById('game-grid');
+        const indexA = cards.indexOf(cardA);
+        const indexB = cards.indexOf(cardB);
+
+        [cards[indexA], cards[indexB]] = [cards[indexB], cards[indexA]];
+
+        grid.innerHTML = '';
+        cards.forEach((c, i) => {
+            c.element.classList.remove('swapping');
+            c.element.onclick = () => handleCardClick(i);
+            grid.appendChild(c.element);
+        });
+
+        isProcessing = false;
+    }
+
+    function startTimer() {
+        if (timerInterval) return;
+        timerInterval = setInterval(() => {
+            secondsElapsed++;
+            const m = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+            const s = (secondsElapsed % 60).toString().padStart(2, '0');
+            document.getElementById('timer').textContent = `${m}:${s}`;
+        }, 1000);
+    }
+
+    function updateStats() {
+        document.getElementById('steps').textContent = steps;
+        document.getElementById('pairs').textContent = `${matchedCount} / ${totalPairs}`;
+    }
+
+    function checkWin() {
+        if (matchedCount === totalPairs) {
+            clearInterval(timerInterval);
+            setTimeout(() => {
+                document.getElementById('win-stats').textContent = `共花費 ${steps} 步，總時長 ${secondsElapsed} 秒。`;
+                document.getElementById('overlay').style.display = 'flex';
+            }, 600);
+        }
+    }
+
+    function closeOverlay() {
+        document.getElementById('overlay').style.display = 'none';
+        startGame();
+    }
+
+    function shuffleArray(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+    }
+
+    window.onload = startGame;
+</script>
+
+</body>
+</html>

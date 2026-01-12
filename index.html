@@ -9,6 +9,7 @@
     1. 點擊「專注全螢幕」：隱藏設定面板，將卡牌縮放至不捲動視窗的大小。
     2. 點擊右下角「退出」：返回設定模式，可更改圖片或難度。
     3. 進階換位：在專注模式下依然保有平滑的旋轉交換軌跡。
+    4. 浮動預覽：左下角設有磨砂質感按鈕，方便在專注模式下單手切換預覽。
     -->
     <style>
         :root {
@@ -253,24 +254,33 @@
         .card-front img { width: 85%; height: 85%; object-fit: contain; }
         .swapping { z-index: 100 !important; pointer-events: none; }
 
-        /* 退出按鈕 */
-        #exit-zen {
+        /* 退出與浮動按鈕 */
+        #exit-zen, #zen-preview-btn {
             position: fixed;
             bottom: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.4);
             color: white;
             border: none;
-            padding: 8px 16px;
+            padding: 10px 20px;
             border-radius: 30px;
             font-size: 0.8rem;
             display: none;
             z-index: 1000;
             cursor: pointer;
-            backdrop-filter: blur(5px);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
+            font-weight: 600;
         }
 
-        body.zen-mode #exit-zen { display: block; }
+        #exit-zen { right: 20px; }
+        #zen-preview-btn { left: 20px; }
+
+        body.zen-mode #exit-zen, 
+        body.zen-mode #zen-preview-btn { display: block; }
+
+        /* 浮動預覽按鈕在遊戲開始後隱藏 */
+        body.zen-mode #zen-preview-btn.game-started { display: none !important; }
 
         footer {
             margin-top: 10px;
@@ -296,6 +306,19 @@
             backdrop-filter: blur(15px);
         }
 
+        .overlay-btn {
+            padding: 10px 35px;
+            border-radius: 25px;
+            background-color: var(--text-main);
+            color: white;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .overlay-btn:active { transform: scale(0.95); }
+
         @media (max-width: 480px) {
             #game-grid { gap: 8px; }
             .card-inner { border-radius: 12px; }
@@ -319,20 +342,20 @@
     <div class="control-group">
         <label>遊戲難度</label>
         <select id="difficulty">
-            <option value="basic">基礎版</option>
-            <option value="advanced" selected>進階版 (旋轉軌跡)</option>
+            <option value="basic" selected>基礎版</option>
+            <option value="advanced">進階版 (旋轉軌跡)</option>
         </select>
     </div>
     <div class="control-group">
         <label>圖片來源</label>
         <select id="source-mode" onchange="toggleUploadUI()">
-            <option value="emoji">經典 Emoji</option>
+            <option value="emoji">內建圖案</option>
             <option value="upload">上傳相片</option>
         </select>
     </div>
     <div class="control-group">
         <label>總牌數</label>
-        <input type="number" id="card-count" value="12" min="4" max="64" step="2">
+        <input type="number" id="card-count" value="6" min="4" max="64" step="2">
     </div>
     <div class="control-group" id="upload-ui" style="display: none;">
         <label>上傳圖片</label>
@@ -354,6 +377,7 @@
     <div id="game-grid"></div>
 </div>
 
+<button id="zen-preview-btn" onclick="togglePreview()">開啟/結束預覽</button>
 <button id="exit-zen" onclick="exitZenMode()">退出專注模式</button>
 
 <footer>
@@ -362,8 +386,8 @@
 
 <div id="overlay">
     <h2 style="font-size: 2rem; color: var(--text-main); font-weight: 300;">挑戰成功</h2>
-    <p id="win-stats" style="margin-bottom: 40px; color: #888;"></p>
-    <button class="primary-btn" style="padding: 15px 60px; border-radius: 50px;" onclick="closeOverlay()">再玩一局</button>
+    <p id="win-stats" style="margin-bottom: 25px; color: #888;"></p>
+    <button class="overlay-btn" onclick="closeOverlay()">再玩一局</button>
 </div>
 
 <script>
@@ -514,6 +538,7 @@
         updateStats();
         document.getElementById('preview-btn').disabled = false;
         document.getElementById('preview-btn').textContent = "開啟預覽";
+        document.getElementById('zen-preview-btn').classList.remove('game-started');
     }
 
     function resetGameState() {
@@ -541,10 +566,12 @@
         } else {
             isPreviewing = false;
             cards.forEach(card => card.element.classList.remove('flipped'));
-            btn.textContent = "戰鬥中";
+            btn.textContent = "遊戲進行中";
             btn.classList.remove('active');
             btn.disabled = true;
             isGameStarted = true;
+            // 遊戲開始後隱藏專注模式的浮動預覽按鈕
+            document.getElementById('zen-preview-btn').classList.add('game-started');
             startTimer();
         }
     }
@@ -554,7 +581,9 @@
         if (!isGameStarted) {
             startTimer();
             isGameStarted = true;
+            document.getElementById('preview-btn').textContent = "遊戲進行中";
             document.getElementById('preview-btn').disabled = true;
+            document.getElementById('zen-preview-btn').classList.add('game-started');
         }
 
         const card = cards[index];

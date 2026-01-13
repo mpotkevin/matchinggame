@@ -418,7 +418,8 @@
 </div>
 
 <script>
-    const EMOJIS = ['🍎', '🐶', '🦊', '🍀', '🚀', '🎸', '⚽️', '🍦', '🍕', '🌈', '💎', '🎨', '🦁', '🐼', '🦄', '🍄', '🌍', '⏰', '🎁', '💡', '🔔', '🏀', '🍉', '🚗', '🐱', '🦋', '🥨', '🧩', '🐳', '🍓', '開芯', '🥑', '🍩', '🍪', '🦁', '🐘', '👑'];
+    // 修正後的圖案清單，更換了「開芯」並移除了重複項
+    const EMOJIS = ['🍎', '🐶', '🦊', '🍀', '🚀', '🎸', '⚽️', '🍦', '🍕', '🌈', '💎', '🎨', '🦁', '🐼', '🦄', '🍄', '🌍', '⏰', '🎁', '💡', '🔔', '🏀', '🍉', '🚗', '🐱', '🦋', '🥨', '🧩', '🐳', '🍓', '💖', '🥑', '🍩', '🍪', '🐯', '🐘', '👑'];
     
     let cards = []; 
     let flippedCards = []; 
@@ -446,21 +447,17 @@
         files.forEach(file => {
             const reader = new FileReader();
             reader.onload = (ev) => {
-                // 將新圖片累加到 customImages 陣列中
                 customImages.push(ev.target.result);
                 loaded++;
-                // 當所有選取的檔案讀取完畢，渲染預覽
                 if (loaded === files.length) {
                     renderUploadPreview();
                 }
             };
             reader.readAsDataURL(file);
         });
-        // 清空 input 讓同一個檔案可以重複選取
         e.target.value = '';
     });
 
-    // 渲染上傳圖片的預覽區域
     function renderUploadPreview() {
         const previewContainer = document.getElementById('upload-preview');
         previewContainer.innerHTML = '';
@@ -486,17 +483,14 @@
             previewContainer.appendChild(wrapper);
         });
 
-        // 更新 UI 上的計數與牌數
         const count = customImages.length;
         document.getElementById('upload-label').textContent = count > 0 ? `已載入 ${count} 張` : `選取多個檔案`;
         
-        // 如果是上傳模式，自動將總牌數設為圖片張數 * 2
         if (count > 0 && document.getElementById('source-mode').value === 'upload') {
             document.getElementById('card-count').value = count * 2;
         }
     }
 
-    // 刪除特定圖片
     function removeImage(index) {
         customImages.splice(index, 1);
         renderUploadPreview();

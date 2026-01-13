@@ -19,6 +19,7 @@
             --text-main: #4A4A48;      /* 深灰文字 */
             --accent: #D4A373;         /* 暖木色點綴 */
             --matched-color: #E9EDC9;  /* 已配對背景 */
+            --danger: #e63946;         /* 刪除按鈕顏色 */
             --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
         }
 
@@ -130,19 +131,45 @@
         .preview-scroll {
             grid-column: 1 / -1;
             display: flex;
-            gap: 8px;
+            gap: 12px;
             overflow-x: auto;
-            padding: 5px 0;
-            min-height: 40px;
+            padding: 10px 5px;
+            min-height: 70px;
+            background: #F9F9F9;
+            border-radius: 10px;
+        }
+
+        .thumb-wrapper {
+            position: relative;
+            flex-shrink: 0;
         }
 
         .preview-thumb {
-            width: 40px;
-            height: 40px;
-            border-radius: 6px;
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
             object-fit: cover;
             border: 1px solid #ddd;
-            flex-shrink: 0;
+            display: block;
+        }
+
+        .remove-thumb {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 20px;
+            height: 20px;
+            background: var(--danger);
+            color: white;
+            border-radius: 50%;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 2;
         }
 
         .button-group {
@@ -391,7 +418,7 @@
 </div>
 
 <script>
-    const EMOJIS = ['🍎', '🐶', '🦊', '🍀', '🚀', '🎸', '⚽️', '🍦', '🍕', '🌈', '💎', '🎨', '🦁', '🐼', '🦄', '🍄', '🌍', '⏰', '🎁', '💡', '🔔', '🏀', '🍉', '🚗', '🐱', '🦋', '🥨', '🧩', '🐳', '🍓', '🥑', '🍩', '🍪', '🦁', '🐘', '👑'];
+    const EMOJIS = ['🍎', '🐶', '🦊', '🍀', '🚀', '🎸', '⚽️', '🍦', '🍕', '🌈', '💎', '🎨', '🦁', '🐼', '🦄', '🍄', '🌍', '⏰', '🎁', '💡', '🔔', '🏀', '🍉', '🚗', '🐱', '🦋', '🥨', '🧩', '🐳', '🍓', '開芯', '🥑', '🍩', '🍪', '🦁', '🐘', '👑'];
     
     let cards = []; 
     let flippedCards = []; 
@@ -410,36 +437,74 @@
         const mode = document.getElementById('source-mode').value;
         document.getElementById('upload-ui').style.display = mode === 'upload' ? 'flex' : 'none';
         document.getElementById('upload-preview').style.display = mode === 'upload' ? 'flex' : 'none';
+        renderUploadPreview();
     }
 
     document.getElementById('image-upload').addEventListener('change', function(e) {
         const files = Array.from(e.target.files);
-        customImages = [];
-        const previewContainer = document.getElementById('upload-preview');
-        previewContainer.innerHTML = ''; 
         let loaded = 0;
         files.forEach(file => {
             const reader = new FileReader();
             reader.onload = (ev) => {
+                // 將新圖片累加到 customImages 陣列中
                 customImages.push(ev.target.result);
-                const img = document.createElement('img');
-                img.src = ev.target.result;
-                img.className = 'preview-thumb';
-                previewContainer.appendChild(img);
                 loaded++;
+                // 當所有選取的檔案讀取完畢，渲染預覽
                 if (loaded === files.length) {
-                    document.getElementById('upload-label').textContent = `載入 ${loaded} 張`;
-                    document.getElementById('card-count').value = loaded * 2;
+                    renderUploadPreview();
                 }
             };
             reader.readAsDataURL(file);
         });
+        // 清空 input 讓同一個檔案可以重複選取
+        e.target.value = '';
     });
+
+    // 渲染上傳圖片的預覽區域
+    function renderUploadPreview() {
+        const previewContainer = document.getElementById('upload-preview');
+        previewContainer.innerHTML = '';
+        
+        customImages.forEach((src, index) => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'thumb-wrapper';
+            
+            const img = document.createElement('img');
+            img.src = src;
+            img.className = 'preview-thumb';
+            
+            const removeBtn = document.createElement('div');
+            removeBtn.className = 'remove-thumb';
+            removeBtn.innerHTML = '×';
+            removeBtn.onclick = (e) => {
+                e.stopPropagation();
+                removeImage(index);
+            };
+            
+            wrapper.appendChild(img);
+            wrapper.appendChild(removeBtn);
+            previewContainer.appendChild(wrapper);
+        });
+
+        // 更新 UI 上的計數與牌數
+        const count = customImages.length;
+        document.getElementById('upload-label').textContent = count > 0 ? `已載入 ${count} 張` : `選取多個檔案`;
+        
+        // 如果是上傳模式，自動將總牌數設為圖片張數 * 2
+        if (count > 0 && document.getElementById('source-mode').value === 'upload') {
+            document.getElementById('card-count').value = count * 2;
+        }
+    }
+
+    // 刪除特定圖片
+    function removeImage(index) {
+        customImages.splice(index, 1);
+        renderUploadPreview();
+    }
 
     function enterZenMode() {
         isZen = true;
         document.body.classList.add('zen-mode');
-        // 如果遊戲還沒開始，先開始
         if (!isGameStarted && !isPreviewing) startGame();
         else fitGameGrid();
     }
@@ -450,7 +515,6 @@
         fitGameGrid();
     }
 
-    // 動態調整 Grid，確保不捲動
     function fitGameGrid() {
         const grid = document.getElementById('game-grid');
         const container = document.getElementById('game-container');
@@ -460,13 +524,12 @@
         const containerW = container.clientWidth;
         const containerH = container.clientHeight;
 
-        // 計算最佳行列數
         let bestCols = 1;
         let maxCardSize = 0;
 
         for (let cols = 1; cols <= count; cols++) {
             const rows = Math.ceil(count / cols);
-            const gapSize = 12; // CSS 內的 gap
+            const gapSize = 12; 
             const availableW = containerW - (cols - 1) * gapSize;
             const availableH = containerH - (rows - 1) * gapSize;
             
@@ -480,15 +543,14 @@
             }
         }
 
-        // 稍微調小一點點點確保邊緣不溢出
         const finalSize = Math.floor(maxCardSize * 0.98);
         grid.style.gridTemplateColumns = `repeat(${bestCols}, ${finalSize}px)`;
         
         cards.forEach(c => {
             c.element.style.width = `${finalSize}px`;
             c.element.style.height = `${finalSize}px`;
-            // 動態調整字體大小
-            c.element.querySelector('.card-face').style.fontSize = `${finalSize * 0.6}px`;
+            const face = c.element.querySelector('.card-face');
+            if (face) face.style.fontSize = `${finalSize * 0.6}px`;
         });
     }
 
@@ -570,7 +632,6 @@
             btn.classList.remove('active');
             btn.disabled = true;
             isGameStarted = true;
-            // 遊戲開始後隱藏專注模式的浮動預覽按鈕
             document.getElementById('zen-preview-btn').classList.add('game-started');
             startTimer();
         }

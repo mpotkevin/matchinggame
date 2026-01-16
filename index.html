@@ -4,23 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>記憶對對碰 - 腦力大挑戰</title>
-    <!-- 
-    【專注模式操作】
-    1. 點擊「專注全螢幕」：隱藏設定面板，將卡牌縮放至不捲動視窗的大小。
-    2. 點擊右下角「退出」：返回設定模式，可更改圖片或難度。
-    3. 進階換位：在專注模式下依然保有平滑的旋轉交換軌跡。
-    4. 浮動預覽：左下角設有磨砂質感按鈕，方便在專注模式下單手切換預覽。
-    -->
     <style>
         :root {
-            --bg-color: #FAFAF7;       /* 奶白背景 */
-            --card-back: #A3B18A;      /* 莫蘭迪綠卡背 */
+            --bg-color: #FAFAF7;       
+            --card-back: #A3B18A;      
             --card-front: #ffffff;
-            --text-main: #4A4A48;      /* 深灰文字 */
-            --accent: #D4A373;         /* 暖木色點綴 */
-            --matched-color: #E9EDC9;  /* 已配對背景 */
-            --danger: #e63946;         /* 刪除按鈕顏色 */
+            --text-main: #4A4A48;      
+            --accent: #D4A373;         
+            --matched-color: #E9EDC9;  
+            --danger: #e63946;         
             --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            
+            --color-classic: #A3B18A;
+            --color-sand: #D4A373;
+            --color-blue: #8E9AAF;
+            --color-purple: #B8AFE6;
+
+            /* 交換動畫時間：2.4s (原 1.2s 的 0.5 倍速) */
+            --swap-speed: 2.4s;
         }
 
         * {
@@ -38,13 +39,11 @@
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
-            transition: padding 0.3s ease;
+            overflow-y: auto; 
         }
 
-        /* 專注模式樣式 */
         body.zen-mode {
             padding: 0;
-            overflow: hidden; /* 防止捲動 */
         }
 
         body.zen-mode .controls, 
@@ -56,7 +55,7 @@
         header {
             text-align: center;
             width: 100%;
-            max-width: 600px;
+            max-width: 900px;
             margin-bottom: 10px;
             flex-shrink: 0;
         }
@@ -78,7 +77,7 @@
             margin-bottom: 10px;
             font-weight: 600;
             width: 100%;
-            max-width: 600px;
+            max-width: 900px;
             z-index: 10;
         }
 
@@ -91,18 +90,19 @@
             margin-bottom: 2px;
         }
 
-        /* 控制面板 */
         .controls {
             background: white;
-            padding: 20px;
+            padding: 15px 20px;
             border-radius: 20px;
             box-shadow: var(--card-shadow);
             width: 100%;
-            max-width: 600px;
+            max-width: 1000px;
             margin-bottom: 20px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-            gap: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: flex-end;
+            justify-content: center;
             flex-shrink: 0;
         }
 
@@ -110,7 +110,10 @@
             display: flex;
             flex-direction: column;
             gap: 6px;
+            min-width: 120px;
         }
+
+        .control-group.small { min-width: 80px; }
 
         label {
             font-size: 0.75rem;
@@ -119,17 +122,18 @@
         }
 
         select, input[type="number"], button {
-            padding: 10px;
+            padding: 8px 12px;
             border: 1px solid #EAEAEA;
             border-radius: 10px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             cursor: pointer;
             background: #FFF;
             transition: all 0.2s;
+            height: 40px;
         }
 
         .preview-scroll {
-            grid-column: 1 / -1;
+            width: 100%;
             display: flex;
             gap: 12px;
             overflow-x: auto;
@@ -137,6 +141,7 @@
             min-height: 70px;
             background: #F9F9F9;
             border-radius: 10px;
+            margin-top: 5px;
         }
 
         .thumb-wrapper {
@@ -173,69 +178,72 @@
         }
 
         .button-group {
-            grid-column: 1 / -1;
             display: flex;
             gap: 10px;
-            margin-top: 5px;
+            align-items: center;
         }
 
         button.primary-btn {
-            flex: 2;
             background-color: var(--text-main);
             color: white;
             border: none;
             font-weight: bold;
+            padding: 0 20px;
         }
 
         button.zen-btn {
-            flex: 1.5;
             background-color: var(--accent);
             color: white;
             border: none;
             font-weight: bold;
+            padding: 0 20px;
         }
 
         button.secondary-btn {
-            flex: 1;
             background-color: #F0F0F0;
             color: #555;
             border: none;
             font-weight: 600;
+            padding: 0 15px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
 
         button.secondary-btn.active { background-color: #DDD; }
         button:disabled { opacity: 0.3; cursor: not-allowed; }
 
-        /* 遊戲區域容器 */
         #game-container {
             width: 100%;
             flex-grow: 1;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            padding: 10px;
-            min-height: 0;
-            overflow: hidden;
+            padding: 20px;
+            min-height: 400px;
+            position: relative;
         }
 
         #game-grid {
-            display: grid;
-            gap: 12px;
-            justify-content: center;
-            align-content: center;
+            display: block; 
             width: 100%;
-            height: 100%;
+            min-height: 100%; 
+            position: relative;
+            margin: 0 auto;
         }
 
-        /* 卡牌設計 */
         .card {
             aspect-ratio: 1 / 1;
             perspective: 1000px;
             cursor: pointer;
-            position: relative;
+            position: absolute;
             z-index: 1;
-            max-width: 150px;
-            max-height: 150px;
+            max-width: 250px;
+            max-height: 250px;
+            /* 將 Transition 設定為緩慢交換模式 */
+            transition: top var(--swap-speed) cubic-bezier(0.45, 0.05, 0.55, 0.95), 
+                        left var(--swap-speed) cubic-bezier(0.45, 0.05, 0.55, 0.95), 
+                        transform 0.6s ease;
         }
 
         .card-inner {
@@ -262,8 +270,22 @@
             align-items: center;
             justify-content: center;
             border-radius: 16px;
-            font-size: min(12vw, 4rem);
+            font-size: 2.5rem;
             line-height: 1;
+        }
+
+        .card-number {
+            position: absolute;
+            font-weight: 900;
+            color: rgba(255,255,255,1);
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
         }
 
         .card-back {
@@ -279,35 +301,68 @@
         }
 
         .card-front img { width: 85%; height: 85%; object-fit: contain; }
-        .swapping { z-index: 100 !important; pointer-events: none; }
+        .swapping { z-index: 100 !important; }
 
-        /* 退出與浮動按鈕 */
-        #exit-zen, #zen-preview-btn {
+        .preview-timer-label {
+            font-size: 0.8rem;
+            color: #888;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+
+        #exit-zen, #zen-preview-btn-container {
             position: fixed;
             bottom: 20px;
+            z-index: 1000;
+            display: none;
+        }
+
+        #exit-zen {
+            right: 20px;
             background: rgba(0, 0, 0, 0.4);
             color: white;
             border: none;
             padding: 10px 20px;
             border-radius: 30px;
             font-size: 0.8rem;
-            display: none;
-            z-index: 1000;
             cursor: pointer;
             backdrop-filter: blur(10px);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            transition: all 0.2s;
             font-weight: 600;
         }
 
-        #exit-zen { right: 20px; }
-        #zen-preview-btn { left: 20px; }
+        #zen-preview-btn-container {
+            left: 20px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
 
-        body.zen-mode #exit-zen, 
-        body.zen-mode #zen-preview-btn { display: block; }
+        #zen-preview-btn {
+            background: rgba(0, 0, 0, 0.4);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            font-weight: 600;
+        }
 
-        /* 浮動預覽按鈕在遊戲開始後隱藏 */
-        body.zen-mode #zen-preview-btn.game-started { display: none !important; }
+        .zen-timer {
+            background: rgba(212, 163, 115, 0.8);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            backdrop-filter: blur(10px);
+            display: none;
+        }
+
+        body.zen-mode #exit-zen { display: block; }
+        body.zen-mode #zen-preview-btn-container { display: flex; }
+        body.zen-mode #zen-preview-btn-container.game-started { display: none !important; }
 
         footer {
             margin-top: 10px;
@@ -346,10 +401,9 @@
         
         .overlay-btn:active { transform: scale(0.95); }
 
-        @media (max-width: 480px) {
-            #game-grid { gap: 8px; }
-            .card-inner { border-radius: 12px; }
-            .card-face { border-radius: 12px; }
+        @media (max-width: 768px) {
+            .controls { padding: 10px; gap: 10px; }
+            .control-group { min-width: 100px; }
             header h1 { font-size: 1.2rem; }
         }
     </style>
@@ -370,7 +424,24 @@
         <label>遊戲難度</label>
         <select id="difficulty">
             <option value="basic" selected>基礎版</option>
-            <option value="advanced">進階版 (旋轉軌跡)</option>
+            <option value="advanced">進階版 (改變位置)</option>
+        </select>
+    </div>
+    <div class="control-group">
+        <label>排列模式</label>
+        <select id="layout-mode" onchange="fitGameGrid()">
+            <option value="grid" selected>整齊排列</option>
+            <option value="scatter">隨意散佈</option>
+        </select>
+    </div>
+    <div class="control-group">
+        <label>卡背樣式</label>
+        <select id="card-style" onchange="updateCardStyle()">
+            <option value="classic">經典綠</option>
+            <option value="sand">暖沙色</option>
+            <option value="blue">靜謐藍</option>
+            <option value="purple">薰衣草</option>
+            <option value="numbered" selected>數字編號 (大字體)</option>
         </select>
     </div>
     <div class="control-group">
@@ -380,23 +451,27 @@
             <option value="upload">上傳相片</option>
         </select>
     </div>
-    <div class="control-group">
+    <div class="control-group small">
         <label>總牌數</label>
         <input type="number" id="card-count" value="6" min="4" max="64" step="2">
     </div>
-    <div class="control-group" id="upload-ui" style="display: none;">
-        <label>上傳圖片</label>
-        <div style="position: relative;">
-            <button type="button" id="upload-label" style="width: 100%; font-size: 0.75rem; padding: 10px;">選取多個檔案</button>
-            <input type="file" id="image-upload" multiple accept="image/*" style="position: absolute; opacity: 0; left: 0; top: 0; width: 100%; height: 100%; cursor: pointer;">
-        </div>
-    </div>
-    <div id="upload-preview" class="preview-scroll" style="display: none;"></div>
     
     <div class="button-group">
-        <button class="secondary-btn" id="preview-btn" onclick="togglePreview()" disabled>開啟預覽</button>
+        <div style="display: flex; align-items: center; gap: 5px;">
+            <button class="secondary-btn" id="preview-btn" onclick="togglePreview()" disabled>開啟預覽</button>
+            <span id="preview-timer" class="preview-timer-label"></span>
+        </div>
         <button class="zen-btn" onclick="enterZenMode()">專注全螢幕</button>
         <button class="primary-btn" onclick="startGame()">重置遊戲</button>
+    </div>
+
+    <div id="upload-ui" class="control-group" style="display: none; width: 100%;">
+        <label>上傳圖片</label>
+        <div style="position: relative; width: 100%;">
+            <button type="button" id="upload-label" style="width: 100%;">選取多個檔案</button>
+            <input type="file" id="image-upload" multiple accept="image/*" style="position: absolute; opacity: 0; left: 0; top: 0; width: 100%; height: 100%; cursor: pointer;">
+        </div>
+        <div id="upload-preview" class="preview-scroll"></div>
     </div>
 </div>
 
@@ -404,7 +479,10 @@
     <div id="game-grid"></div>
 </div>
 
-<button id="zen-preview-btn" onclick="togglePreview()">開啟/結束預覽</button>
+<div id="zen-preview-btn-container">
+    <button id="zen-preview-btn" onclick="togglePreview()">開啟/結束預覽</button>
+    <div id="zen-timer" class="zen-timer">0s</div>
+</div>
 <button id="exit-zen" onclick="exitZenMode()">退出專注模式</button>
 
 <footer>
@@ -418,7 +496,6 @@
 </div>
 
 <script>
-    // 修正後的圖案清單，更換了「開芯」並移除了重複項
     const EMOJIS = ['🍎', '🐶', '🦊', '🍀', '🚀', '🎸', '⚽️', '🍦', '🍕', '🌈', '💎', '🎨', '🦁', '🐼', '🦄', '🍄', '🌍', '⏰', '🎁', '💡', '🔔', '🏀', '🍉', '🚗', '🐱', '🦋', '🥨', '🧩', '🐳', '🍓', '💖', '🥑', '🍩', '🍪', '🐯', '🐘', '👑'];
     
     let cards = []; 
@@ -434,10 +511,24 @@
     let isZen = false;
     let customImages = [];
 
+    let previewTimerInterval = null;
+    let previewSeconds = 0;
+
+    function updateCardStyle() {
+        const style = document.getElementById('card-style').value;
+        const root = document.documentElement;
+        switch(style) {
+            case 'sand': root.style.setProperty('--card-back', 'var(--color-sand)'); break;
+            case 'blue': root.style.setProperty('--card-back', 'var(--color-blue)'); break;
+            case 'purple': root.style.setProperty('--card-back', 'var(--color-purple)'); break;
+            default: root.style.setProperty('--card-back', 'var(--color-classic)'); break;
+        }
+        if (cards.length > 0) fitGameGrid(); 
+    }
+
     function toggleUploadUI() {
         const mode = document.getElementById('source-mode').value;
         document.getElementById('upload-ui').style.display = mode === 'upload' ? 'flex' : 'none';
-        document.getElementById('upload-preview').style.display = mode === 'upload' ? 'flex' : 'none';
         renderUploadPreview();
     }
 
@@ -449,9 +540,7 @@
             reader.onload = (ev) => {
                 customImages.push(ev.target.result);
                 loaded++;
-                if (loaded === files.length) {
-                    renderUploadPreview();
-                }
+                if (loaded === files.length) renderUploadPreview();
             };
             reader.readAsDataURL(file);
         });
@@ -460,32 +549,24 @@
 
     function renderUploadPreview() {
         const previewContainer = document.getElementById('upload-preview');
+        if (!previewContainer) return;
         previewContainer.innerHTML = '';
-        
         customImages.forEach((src, index) => {
             const wrapper = document.createElement('div');
             wrapper.className = 'thumb-wrapper';
-            
             const img = document.createElement('img');
             img.src = src;
             img.className = 'preview-thumb';
-            
             const removeBtn = document.createElement('div');
             removeBtn.className = 'remove-thumb';
             removeBtn.innerHTML = '×';
-            removeBtn.onclick = (e) => {
-                e.stopPropagation();
-                removeImage(index);
-            };
-            
+            removeBtn.onclick = (e) => { e.stopPropagation(); removeImage(index); };
             wrapper.appendChild(img);
             wrapper.appendChild(removeBtn);
             previewContainer.appendChild(wrapper);
         });
-
         const count = customImages.length;
         document.getElementById('upload-label').textContent = count > 0 ? `已載入 ${count} 張` : `選取多個檔案`;
-        
         if (count > 0 && document.getElementById('source-mode').value === 'upload') {
             document.getElementById('card-count').value = count * 2;
         }
@@ -500,64 +581,141 @@
         isZen = true;
         document.body.classList.add('zen-mode');
         if (!isGameStarted && !isPreviewing) startGame();
-        else fitGameGrid();
+        else setTimeout(fitGameGrid, 50); 
     }
 
     function exitZenMode() {
         isZen = false;
         document.body.classList.remove('zen-mode');
-        fitGameGrid();
+        setTimeout(fitGameGrid, 50);
     }
 
     function fitGameGrid() {
         const grid = document.getElementById('game-grid');
         const container = document.getElementById('game-container');
+        const layout = document.getElementById('layout-mode').value;
+        const style = document.getElementById('card-style').value;
+        
         if (!cards.length) return;
 
         const count = cards.length;
-        const containerW = container.clientWidth;
-        const containerH = container.clientHeight;
+        const padding = 40;
+        const containerW = container.clientWidth - padding; 
+        const containerH = container.clientHeight - padding;
 
-        let bestCols = 1;
-        let maxCardSize = 0;
-
-        for (let cols = 1; cols <= count; cols++) {
-            const rows = Math.ceil(count / cols);
-            const gapSize = 12; 
-            const availableW = containerW - (cols - 1) * gapSize;
-            const availableH = containerH - (rows - 1) * gapSize;
+        if (layout === 'grid') {
+            let bestCols = 1;
+            let maxCardSize = 0;
             
-            const cardW = availableW / cols;
-            const cardH = availableH / rows;
-            const currentCardSize = Math.min(cardW, cardH);
-
-            if (currentCardSize > maxCardSize) {
-                maxCardSize = currentCardSize;
-                bestCols = cols;
+            for (let cols = 1; cols <= count; cols++) {
+                const rows = Math.ceil(count / cols);
+                const gapSize = 12; 
+                const cardW = (containerW - (cols - 1) * gapSize) / cols;
+                const cardH = (containerH - (rows - 1) * gapSize) / rows;
+                const currentCardSize = Math.min(cardW, cardH);
+                
+                if (currentCardSize > maxCardSize) {
+                    maxCardSize = currentCardSize;
+                    bestCols = cols;
+                }
             }
-        }
 
-        const finalSize = Math.floor(maxCardSize * 0.98);
-        grid.style.gridTemplateColumns = `repeat(${bestCols}, ${finalSize}px)`;
+            if (count === 6 && containerW > containerH) {
+                bestCols = 3;
+                const rows = 2;
+                const cardW = (containerW - (3 - 1) * 12) / 3;
+                const cardH = (containerH - (2 - 1) * 12) / 2;
+                maxCardSize = Math.min(cardW, cardH);
+            }
+
+            const finalSize = Math.max(Math.floor(maxCardSize * 0.95), 50);
+            const actualRows = Math.ceil(count / bestCols);
+            const gapSize = 12;
+
+            const gridTotalW = (bestCols * finalSize) + (bestCols - 1) * gapSize;
+            const gridTotalH = (actualRows * finalSize) + (actualRows - 1) * gapSize;
+            const startX = (containerW - gridTotalW) / 2;
+            const startY = (containerH - gridTotalH) / 2;
+
+            grid.style.height = `${gridTotalH + 20}px`;
+
+            cards.forEach((c, i) => {
+                const col = i % bestCols;
+                const row = Math.floor(i / bestCols);
+                
+                c.element.style.width = `${finalSize}px`;
+                c.element.style.height = `${finalSize}px`;
+                c.element.style.left = `${startX + col * (finalSize + gapSize)}px`;
+                c.element.style.top = `${startY + row * (finalSize + gapSize)}px`;
+                c.element.style.transform = 'rotate(0deg)';
+                
+                updateCardContent(c, finalSize, style);
+            });
+        } else {
+            let rows = 2;
+            let cols = Math.ceil(count / rows);
+            
+            if (count > 10) {
+                cols = Math.ceil(Math.sqrt(count * (containerW / containerH)));
+                rows = Math.ceil(count / cols);
+            }
+
+            const gap = 20;
+            const cardW = (containerW - (cols - 1) * gap) / cols;
+            const cardH = (containerH - (rows - 1) * gap) / rows;
+            const finalSize = Math.max(Math.min(cardW, cardH) * 0.85, 60);
+            
+            const gridHeight = Math.max(containerH, rows * (finalSize + gap + 20));
+            grid.style.height = `${gridHeight}px`;
+
+            cards.forEach((c, i) => {
+                const pos = c.scatterPos;
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+
+                const cellW = containerW / cols;
+                const cellH = gridHeight / rows;
+                
+                const baseX = col * cellW + (cellW - finalSize) / 2;
+                const baseY = row * cellH + (cellH - finalSize) / 2;
+                
+                const rangeX = (cellW - finalSize) * 0.5;
+                const rangeY = (cellH - finalSize) * 0.5;
+
+                c.element.style.width = `${finalSize}px`;
+                c.element.style.height = `${finalSize}px`;
+                c.element.style.left = `${Math.max(10, Math.min(containerW - finalSize, baseX + (pos.relX - 0.5) * rangeX))}px`;
+                c.element.style.top = `${Math.max(10, baseY + (pos.relY - 0.5) * rangeY)}px`;
+                c.element.style.transform = `rotate(${pos.rot}deg)`;
+                
+                updateCardContent(c, finalSize, style);
+            });
+        }
+    }
+
+    function updateCardContent(card, size, style) {
+        const faceFront = card.element.querySelector('.card-front');
+        const faceBack = card.element.querySelector('.card-back');
+        if (faceFront) faceFront.style.fontSize = `${size * 0.6}px`;
         
-        cards.forEach(c => {
-            c.element.style.width = `${finalSize}px`;
-            c.element.style.height = `${finalSize}px`;
-            const face = c.element.querySelector('.card-face');
-            if (face) face.style.fontSize = `${finalSize * 0.6}px`;
-        });
+        if (style === 'numbered') {
+            faceBack.innerHTML = `<div class="card-number" style="font-size: ${size * 0.85}px">${card.originalNumber}</div>`;
+        } else {
+            faceBack.innerHTML = '';
+        }
     }
 
     function startGame() {
         resetGameState();
-        
         const countInput = document.getElementById('card-count');
+        const difficulty = document.getElementById('difficulty').value;
         let count = parseInt(countInput.value);
         if (count % 2 !== 0) count++; 
         countInput.value = count;
         totalPairs = count / 2;
 
         const mode = document.getElementById('source-mode').value;
+        const style = document.getElementById('card-style').value;
         let pool = (mode === 'upload' && customImages.length > 0) ? customImages : EMOJIS;
 
         const selectedIcons = [];
@@ -570,6 +728,12 @@
 
         const gameIcons = [...selectedIcons, ...selectedIcons];
         shuffleArray(gameIcons);
+
+        // 打亂數字邏輯：若為進階版，將數字編號打亂
+        let numbers = Array.from({length: count}, (_, i) => i + 1);
+        if (difficulty === 'advanced') {
+            shuffleArray(numbers);
+        }
 
         const grid = document.getElementById('game-grid');
         grid.innerHTML = '';
@@ -585,20 +749,33 @@
                     </div>
                 </div>
             `;
-            cardEl.onclick = () => handleCardClick(index);
+            const cardObj = { 
+                icon, 
+                element: cardEl, 
+                isMatched: false, 
+                isFlipped: false,
+                originalNumber: numbers[index], // 指派可能被打亂過的編號
+                scatterPos: {
+                    relX: Math.random(),
+                    relY: Math.random(),
+                    rot: (Math.random() - 0.5) * 20
+                }
+            };
+            cardEl.onclick = () => handleCardClick(cardObj);
             grid.appendChild(cardEl);
-            return { icon, element: cardEl, isMatched: false, isFlipped: false };
+            return cardObj;
         });
-
-        fitGameGrid();
+        
+        setTimeout(fitGameGrid, 10);
         updateStats();
         document.getElementById('preview-btn').disabled = false;
         document.getElementById('preview-btn').textContent = "開啟預覽";
-        document.getElementById('zen-preview-btn').classList.remove('game-started');
+        document.getElementById('zen-preview-btn-container').classList.remove('game-started');
     }
 
     function resetGameState() {
         clearInterval(timerInterval);
+        stopPreviewTimer();
         timerInterval = null;
         secondsElapsed = 0;
         steps = 0;
@@ -609,16 +786,23 @@
         isPreviewing = false;
         document.getElementById('timer').textContent = "00:00";
         document.getElementById('preview-btn').disabled = true;
+        document.getElementById('game-container').scrollTop = 0;
     }
 
     function togglePreview() {
         if (isProcessing || isGameStarted) return;
         const btn = document.getElementById('preview-btn');
+        const zenBtn = document.getElementById('zen-preview-btn');
+        const zenTimer = document.getElementById('zen-timer');
+        
         if (!isPreviewing) {
             isPreviewing = true;
             cards.forEach(card => card.element.classList.add('flipped'));
             btn.textContent = "結束預覽並開始";
             btn.classList.add('active');
+            zenBtn.textContent = "結束預覽";
+            zenTimer.style.display = 'block';
+            startPreviewTimer();
         } else {
             isPreviewing = false;
             cards.forEach(card => card.element.classList.remove('flipped'));
@@ -626,22 +810,50 @@
             btn.classList.remove('active');
             btn.disabled = true;
             isGameStarted = true;
-            document.getElementById('zen-preview-btn').classList.add('game-started');
+            document.getElementById('zen-preview-btn-container').classList.add('game-started');
+            stopPreviewTimer();
             startTimer();
         }
     }
 
-    function handleCardClick(index) {
+    function startPreviewTimer() {
+        previewSeconds = 0;
+        updatePreviewTimerUI();
+        previewTimerInterval = setInterval(() => {
+            previewSeconds++;
+            updatePreviewTimerUI();
+        }, 1000);
+    }
+
+    function stopPreviewTimer() {
+        clearInterval(previewTimerInterval);
+        document.getElementById('preview-timer').textContent = '';
+        const zenTimer = document.getElementById('zen-timer');
+        if (zenTimer) zenTimer.style.display = 'none';
+    }
+
+    function updatePreviewTimerUI() {
+        const text = `${previewSeconds}s`;
+        const pTimer = document.getElementById('preview-timer');
+        const zTimer = document.getElementById('zen-timer');
+        if (pTimer) pTimer.textContent = text;
+        if (zTimer) zTimer.textContent = text;
+    }
+
+    function handleCardClick(card) {
         if (isProcessing || isPreviewing) return;
+        
+        const index = cards.indexOf(card);
+        if (index === -1) return;
+
         if (!isGameStarted) {
             startTimer();
             isGameStarted = true;
             document.getElementById('preview-btn').textContent = "遊戲進行中";
             document.getElementById('preview-btn').disabled = true;
-            document.getElementById('zen-preview-btn').classList.add('game-started');
+            document.getElementById('zen-preview-btn-container').classList.add('game-started');
         }
 
-        const card = cards[index];
         if (card.isFlipped || card.isMatched || flippedCards.length >= 2) return;
 
         card.isFlipped = true;
@@ -662,8 +874,8 @@
         const card2 = cards[idx2];
         const isMatch = card1.icon === card2.icon;
 
-        setTimeout(() => {
-            if (isMatch) {
+        if (isMatch) {
+            setTimeout(() => {
                 card1.isMatched = card2.isMatched = true;
                 card1.element.classList.add('matched');
                 card2.element.classList.add('matched');
@@ -673,60 +885,69 @@
                 isProcessing = false;
                 checkWin();
                 if (document.getElementById('difficulty').value === 'advanced') {
-                    setTimeout(swapTwoCardsWithOrbit, 400);
+                    setTimeout(swapTwoCardsEffect, 800);
                 }
-            } else {
+            }, 600);
+        } else {
+            setTimeout(() => {
                 card1.isFlipped = card2.isFlipped = false;
                 card1.element.classList.remove('flipped');
                 card2.element.classList.remove('flipped');
                 flippedCards = [];
-                isProcessing = false;
+                
                 if (document.getElementById('difficulty').value === 'advanced') {
-                    swapTwoCardsWithOrbit();
+                    setTimeout(() => {
+                        swapTwoCardsEffect();
+                    }, 700);
+                } else {
+                    isProcessing = false;
                 }
-            }
-        }, 800);
+            }, 800);
+        }
     }
 
-    async function swapTwoCardsWithOrbit() {
+    async function swapTwoCardsEffect() {
         const unmatched = cards.filter(c => !c.isMatched);
-        if (unmatched.length < 2) return;
+        if (unmatched.length < 2) {
+            isProcessing = false;
+            return;
+        }
+        
         isProcessing = true;
-        const idxA = Math.floor(Math.random() * unmatched.length);
-        let idxB = Math.floor(Math.random() * unmatched.length);
-        while (idxA === idxB) idxB = Math.floor(Math.random() * unmatched.length);
-        const cardA = unmatched[idxA];
-        const cardB = unmatched[idxB];
-        const rectA = cardA.element.getBoundingClientRect();
-        const rectB = cardB.element.getBoundingClientRect();
-        const dx = rectB.left - rectA.left;
-        const dy = rectB.top - rectA.top;
+        const idxA_real = Math.floor(Math.random() * unmatched.length);
+        let idxB_real = Math.floor(Math.random() * unmatched.length);
+        while (idxA_real === idxB_real) idxB_real = Math.floor(Math.random() * unmatched.length);
+        
+        const cardA = unmatched[idxA_real];
+        const cardB = unmatched[idxB_real];
+        
+        const styleA = { left: cardA.element.style.left, top: cardA.element.style.top, transform: cardA.element.style.transform };
+        const styleB = { left: cardB.element.style.left, top: cardB.element.style.top, transform: cardB.element.style.transform };
+
         cardA.element.classList.add('swapping');
         cardB.element.classList.add('swapping');
-        const duration = 1200; 
-        const easing = 'cubic-bezier(0.45, 0.05, 0.55, 0.95)';
-        const animA = cardA.element.animate([
-            { transform: `translate(0, 0) rotate(0deg)` },
-            { transform: `translate(${dx/2}px, ${dy/2}px) rotate(90deg) scale(1.15)`, offset: 0.5 },
-            { transform: `translate(${dx}px, ${dy}px) rotate(180deg)` }
-        ], { duration, easing });
-        const animB = cardB.element.animate([
-            { transform: `translate(0, 0) rotate(0deg)` },
-            { transform: `translate(${-dx/2}px, ${-dy/2}px) rotate(90deg) scale(1.15)`, offset: 0.5 },
-            { transform: `translate(${-dx}px, ${-dy}px) rotate(180deg)` }
-        ], { duration, easing });
-        await Promise.all([animA.finished, animB.finished]);
-        const grid = document.getElementById('game-grid');
+
+        cardA.element.style.left = styleB.left;
+        cardA.element.style.top = styleB.top;
+        cardA.element.style.transform = styleB.transform;
+
+        cardB.element.style.left = styleA.left;
+        cardB.element.style.top = styleA.top;
+        cardB.element.style.transform = styleA.transform;
+
+        const tempScatter = cardA.scatterPos;
+        cardA.scatterPos = cardB.scatterPos;
+        cardB.scatterPos = tempScatter;
+
         const indexA = cards.indexOf(cardA);
         const indexB = cards.indexOf(cardB);
         [cards[indexA], cards[indexB]] = [cards[indexB], cards[indexA]];
-        grid.innerHTML = '';
-        cards.forEach((c, i) => {
-            c.element.classList.remove('swapping');
-            c.element.onclick = () => handleCardClick(i);
-            grid.appendChild(c.element);
-        });
-        isProcessing = false;
+
+        setTimeout(() => {
+            cardA.element.classList.remove('swapping');
+            cardB.element.classList.remove('swapping');
+            isProcessing = false;
+        }, 2450);
     }
 
     function startTimer() {
